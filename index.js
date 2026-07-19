@@ -1,7 +1,7 @@
 const express = require('express');
 const app = express();
+app.use(express.json());
 const PORT = 3000;
-
 
 // In-memory "database" — just a JS array, lives only in RAM.
 // Resets every time the server restarts (that's expected for now).
@@ -10,6 +10,7 @@ let tasks = [
   { id: 2, title: 'Walk the dog', done: false },
   { id: 3, title: 'Finish CRUD assignment', done: true },
 ];
+let nextId = 4; // next free id to hand out (1, 2, 3 are already taken by seed data)
 
 // A minimal "hello" route — just proves the server is alive
 app.get('/', (req, res) => {
@@ -45,6 +46,26 @@ app.get('/tasks/:id', (req, res) => {
   }
 
   res.json(task);
+});
+// POST /tasks — creates a new task from the JSON body
+app.post('/tasks', (req, res) => {
+  const { title } = req.body || {};
+
+  // Validation: the server never trusts the client.
+  // Reject a missing title, a non-string title, or just whitespace.
+  if (!title || typeof title !== 'string' || title.trim() === '') {
+    return res.status(400).json({ error: 'title is required and must be a non-empty string' });
+  }
+
+  const newTask = {
+    id: nextId++,        // hand out the next free id, then increment
+    title: title.trim(),
+    done: false,          // new tasks always start unfinished
+  };
+
+  tasks.push(newTask);
+
+  res.status(201).json(newTask); // 201 = "Created"
 });
 
 app.listen(PORT, () => {
