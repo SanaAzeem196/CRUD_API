@@ -1,0 +1,17 @@
+{
+  "name": "crud",
+  "version": "1.0.0",
+  "description": "FlyRank Backend Track W2 A1 - Task CRUD API (JavaScript lane)",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+   
+  },
+  "keywords": ["crud", "express", "api"],
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.19.2",
+    "swagger-ui-express": "^5.0.1"
+
+  }
+}
