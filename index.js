@@ -1,4 +1,6 @@
 const express = require('express');
+const swaggerUi = require('swagger-ui-express');
+const openapiSpec = require('./openapi.json');
 const app = express();
 app.use(express.json());
 const PORT = 3000;
@@ -114,6 +116,7 @@ app.delete('/tasks/:id', (req, res) => {
   res.status(204).send(); // 204 = "No Content" — success, empty body
 });
 
+app.use('/docs', swaggerUi.serve, swaggerUi.setup(openapiSpec));
 app.listen(PORT, () => {
   console.log(`Task API running at http://localhost:${PORT}`);
 });

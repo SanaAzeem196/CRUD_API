@@ -5,13 +5,15 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
-   
   },
-  "keywords": ["crud", "express", "api"],
+  "keywords": [
+    "crud",
+    "express",
+    "api"
+  ],
   "license": "MIT",
   "dependencies": {
     "express": "^4.19.2",
     "swagger-ui-express": "^5.0.1"
-
   }
 }
