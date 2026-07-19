@@ -2,6 +2,15 @@ const express = require('express');
 const app = express();
 const PORT = 3000;
 
+
+// In-memory "database" — just a JS array, lives only in RAM.
+// Resets every time the server restarts (that's expected for now).
+let tasks = [
+  { id: 1, title: 'Buy milk', done: false },
+  { id: 2, title: 'Walk the dog', done: false },
+  { id: 3, title: 'Finish CRUD assignment', done: true },
+];
+
 // A minimal "hello" route — just proves the server is alive
 app.get('/', (req, res) => {
   res.send('Hello, world!');
@@ -19,6 +28,23 @@ app.get('/', (req, res) => {
 // GET /health — used to confirm the server is alive
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
+});
+
+// GET /tasks — returns the whole list
+app.get('/tasks', (req, res) => {
+  res.json(tasks);
+});
+
+// GET /tasks/:id — returns one task by id
+app.get('/tasks/:id', (req, res) => {
+  const id = Number(req.params.id); // path params arrive as strings, so convert
+  const task = tasks.find((t) => t.id === id);
+
+  if (!task) {
+    return res.status(404).json({ error: `Task ${id} not found` });
+  }
+
+  res.json(task);
 });
 
 app.listen(PORT, () => {
