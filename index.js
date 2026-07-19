@@ -68,6 +68,52 @@ app.post('/tasks', (req, res) => {
   res.status(201).json(newTask); // 201 = "Created"
 });
 
+// PUT /tasks/:id — updates title and/or done
+app.put('/tasks/:id', (req, res) => {
+  const id = Number(req.params.id);
+  const task = tasks.find((t) => t.id === id);
+
+  if (!task) {
+    return res.status(404).json({ error: `Task ${id} not found` });
+  }
+
+  const { title, done } = req.body || {};
+  const titleProvided = title !== undefined;
+  const doneProvided = done !== undefined;
+
+  // At least one field must be sent
+  if (!titleProvided && !doneProvided) {
+    return res.status(400).json({ error: 'request body must include title and/or done' });
+  }
+  // Whichever fields ARE sent must be the right type
+  if (titleProvided && (typeof title !== 'string' || title.trim() === '')) {
+    return res.status(400).json({ error: 'title must be a non-empty string' });
+  }
+  if (doneProvided && typeof done !== 'boolean') {
+    return res.status(400).json({ error: 'done must be a boolean (true/false)' });
+  }
+
+  // Apply only the fields that were actually sent
+  if (titleProvided) task.title = title.trim();
+  if (doneProvided) task.done = done;
+
+  res.json(task);
+});
+
+// DELETE /tasks/:id — removes the task
+app.delete('/tasks/:id', (req, res) => {
+  const id = Number(req.params.id);
+  const index = tasks.findIndex((t) => t.id === id);
+
+  if (index === -1) {
+    return res.status(404).json({ error: `Task ${id} not found` });
+  }
+
+  tasks.splice(index, 1); // remove exactly one element at that position
+
+  res.status(204).send(); // 204 = "No Content" — success, empty body
+});
+
 app.listen(PORT, () => {
   console.log(`Task API running at http://localhost:${PORT}`);
 });
