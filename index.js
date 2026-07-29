@@ -60,21 +60,40 @@ app.get('/health', (req, res) => {
 });
 
 // GET /tasks — returns the whole list
+// app.get('/tasks', (req, res) => {
+//   res.json(tasks);
+// });
+
+// GET /tasks — returns the whole list, now read live from the database
 app.get('/tasks', (req, res) => {
-  res.json(tasks);
+  const rows = db.prepare('SELECT * FROM tasks').all();
+  res.json(rows);
 });
 
 // GET /tasks/:id — returns one task by id
+// app.get('/tasks/:id', (req, res) => {
+//   const id = Number(req.params.id); // path params arrive as strings, so convert
+//   const task = tasks.find((t) => t.id === id);
+
+//   if (!task) {
+//     return res.status(404).json({ error: `Task ${id} not found` });
+//   }
+
+//   res.json(task);
+// });
+
+// GET /tasks/:id — returns one row by id, now read live from the database
 app.get('/tasks/:id', (req, res) => {
-  const id = Number(req.params.id); // path params arrive as strings, so convert
-  const task = tasks.find((t) => t.id === id);
+  const id = Number(req.params.id);
+  const task = db.prepare('SELECT * FROM tasks WHERE id = ?').get(id);
 
   if (!task) {
-    return res.status(404).json({ error: `Task ${id} not found` });
+    return res.status(404).json({ error: 'Task not found' });
   }
 
   res.json(task);
 });
+
 // POST /tasks — creates a new task from the JSON body
 app.post('/tasks', (req, res) => {
   const { title } = req.body || {};
