@@ -95,22 +95,44 @@ app.get('/tasks/:id', (req, res) => {
 });
 
 // POST /tasks — creates a new task from the JSON body
+// app.post('/tasks', (req, res) => {
+//   const { title } = req.body || {};
+
+//   // Validation: the server never trusts the client.
+//   // Reject a missing title, a non-string title, or just whitespace.
+//   if (!title || typeof title !== 'string' || title.trim() === '') {
+//     return res.status(400).json({ error: 'title is required and must be a non-empty string' });
+//   }
+
+//   const newTask = {
+//     id: nextId++,        // hand out the next free id, then increment
+//     title: title.trim(),
+//     done: false,          // new tasks always start unfinished
+//   };
+
+//   tasks.push(newTask);
+
+//   res.status(201).json(newTask); // 201 = "Created"
+// });
+
+
+// POST /tasks — inserts a new row into the database
 app.post('/tasks', (req, res) => {
   const { title } = req.body || {};
 
-  // Validation: the server never trusts the client.
-  // Reject a missing title, a non-string title, or just whitespace.
+  // Same validation as Assignment 1 — the server never trusts the client.
   if (!title || typeof title !== 'string' || title.trim() === '') {
     return res.status(400).json({ error: 'title is required and must be a non-empty string' });
   }
 
-  const newTask = {
-    id: nextId++,        // hand out the next free id, then increment
-    title: title.trim(),
-    done: false,          // new tasks always start unfinished
-  };
+  // Insert the new row. done starts at 0 (false). We don't set id —
+  // SQLite's AUTOINCREMENT hands out the next free id for us.
+  const insert = db.prepare('INSERT INTO tasks (title, done) VALUES (?, ?)');
+  const result = insert.run(title.trim(), 0);
 
-  tasks.push(newTask);
+  // result.lastInsertRowid is the id SQLite just assigned to this row.
+  // Fetch the row back so we return exactly what's now in the database.
+  const newTask = db.prepare('SELECT * FROM tasks WHERE id = ?').get(result.lastInsertRowid);
 
   res.status(201).json(newTask); // 201 = "Created"
 });
@@ -146,6 +168,8 @@ app.put('/tasks/:id', (req, res) => {
 
   res.json(task);
 });
+
+
 
 // DELETE /tasks/:id — removes the task
 app.delete('/tasks/:id', (req, res) => {
