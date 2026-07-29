@@ -1,8 +1,34 @@
 const express = require('express');
 const swaggerUi = require('swagger-ui-express');
 const openapiSpec = require('./openapi.json');
+const Database = require('better-sqlite3');
+
+// Opens tasks.db, creating the file if it doesn't exist yet.
+const db = new Database('tasks.db');
+
+// Creates the tasks table only if it doesn't already exist.
+// id is the primary key — SQLite hands out these numbers for us.
+// done is stored as 0/1 since SQLite has no real boolean type.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS tasks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    done INTEGER NOT NULL DEFAULT 0
+  )
+`);
+
+// Seed the 3 example tasks — but only if the table is currently empty.
+// Without this "only if empty" check, every restart would add 3 more rows.
+const row = db.prepare('SELECT COUNT(*) AS count FROM tasks').get();
+if (row.count === 0) {
+  const insert = db.prepare('INSERT INTO tasks (title, done) VALUES (?, ?)');
+  insert.run('Buy milk', 0);
+  insert.run('Walk the dog', 0);
+  insert.run('Finish CRUD assignment', 1);
+}
 const app = express();
 app.use(express.json());
+app.use(express.static('public'));
 const PORT = 3000;
 
 // In-memory "database" — just a JS array, lives only in RAM.
@@ -15,9 +41,9 @@ let tasks = [
 let nextId = 4; // next free id to hand out (1, 2, 3 are already taken by seed data)
 
 // A minimal "hello" route — just proves the server is alive
-app.get('/', (req, res) => {
-  res.send('Hello, world!');
-});
+// app.get('/', (req, res) => {
+//   res.send('Hello, world!');
+// });
 
 // GET / — describes the API
 app.get('/', (req, res) => {

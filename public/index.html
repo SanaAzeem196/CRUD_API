@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Task API — Console</title>
+<style>
+  :root {
+    --bg: #0f1512;
+    --panel: #161f1b;
+    --line: #263029;
+    --text: #e9ede9;
+    --muted: #8fa397;
+    --accent: #4fd1a5;
+    --danger: #e2685c;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 48px 20px;
+  }
+  .wrap { width: 100%; max-width: 560px; }
+  .eyebrow {
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+  h1 {
+    font-size: 28px;
+    margin: 0 0 6px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  .sub {
+    color: var(--muted);
+    font-size: 14px;
+    margin-bottom: 28px;
+  }
+  .add-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+  input[type="text"] {
+    flex: 1;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    color: var(--text);
+    padding: 12px 14px;
+    border-radius: 8px;
+    font-size: 15px;
+    outline: none;
+  }
+  input[type="text"]:focus { border-color: var(--accent); }
+  button {
+    border: none;
+    border-radius: 8px;
+    padding: 12px 18px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .btn-add { background: var(--accent); color: #0a1310; }
+  .btn-add:hover { opacity: 0.9; }
+  .task {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 8px;
+  }
+  .task-title { flex: 1; font-size: 15px; }
+  .task-title.done { text-decoration: line-through; color: var(--muted); }
+  .checkbox {
+    width: 20px;
+    height: 20px;
+    border-radius: 5px;
+    border: 1.5px solid var(--line);
+    cursor: pointer;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--accent);
+    font-size: 13px;
+  }
+  .checkbox.done { background: var(--accent); border-color: var(--accent); color: #0a1310; }
+  .del-btn {
+    background: transparent;
+    color: var(--danger);
+    padding: 6px 10px;
+    font-size: 13px;
+  }
+  .del-btn:hover { background: rgba(226,104,92,0.1); }
+  .empty {
+    color: var(--muted);
+    text-align: center;
+    padding: 40px 0;
+    font-size: 14px;
+  }
+  .stat {
+    margin-top: 20px;
+    color: var(--muted);
+    font-size: 13px;
+    text-align: right;
+  }
+  .error {
+    background: rgba(226,104,92,0.1);
+    border: 1px solid var(--danger);
+    color: var(--danger);
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    margin-bottom: 16px;
+    display: none;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">Task API · Live</div>
+  <h1>To-Do Console</h1>
+  <div class="sub">A working front end for the Task API — create, complete, and delete tasks against the live backend.</div>
+
+  <div class="error" id="error"></div>
+
+  <div class="add-row">
+    <input type="text" id="taskInput" placeholder="Add a task…" />
+    <button class="btn-add" id="addBtn">Add</button>
+  </div>
+
+  <div class="add-row" style="margin-bottom:16px;">
+    <input type="text" id="updateId" placeholder="Task ID to update" style="max-width:110px;" />
+    <input type="text" id="updateTitle" placeholder="New title (leave blank to keep)" />
+    <label style="display:flex;align-items:center;gap:8px;margin:0 8px;color:var(--muted);font-size:13px;">
+      <input type="checkbox" id="updateDone" /> Done
+    </label>
+    <button id="updateBtn">Update</button>
+  </div>
+
+  <div id="list"></div>
+  <div class="stat" id="stat"></div>
+</div>
+
+<script>
+  // If this file is served by the same Express app (recommended), leave as ''.
+  // If opened separately, set to 'http://localhost:3000'.
+  const API_BASE = '';
+
+  const listEl = document.getElementById('list');
+  const statEl = document.getElementById('stat');
+  const errorEl = document.getElementById('error');
+  const inputEl = document.getElementById('taskInput');
+  const addBtn = document.getElementById('addBtn');
+  const updateIdEl = document.getElementById('updateId');
+  const updateTitleEl = document.getElementById('updateTitle');
+  const updateDoneEl = document.getElementById('updateDone');
+  const updateBtn = document.getElementById('updateBtn');
+
+  function showError(msg) {
+    errorEl.textContent = msg;
+    errorEl.style.display = 'block';
+  }
+  function clearError() {
+    errorEl.style.display = 'none';
+  }
+
+  async function fetchTasks() {
+    clearError();
+    try {
+      const res = await fetch(`${API_BASE}/tasks`);
+      if (!res.ok) throw new Error('Could not load tasks');
+      const tasks = await res.json();
+      render(tasks);
+    } catch (e) {
+      showError('Could not reach the API. Is the server running on localhost:3000?');
+    }
+  }
+
+  function render(tasks) {
+    if (!tasks.length) {
+      listEl.innerHTML = '<div class="empty">No tasks yet — add your first one above.</div>';
+      statEl.textContent = '';
+      return;
+    }
+    listEl.innerHTML = tasks.map(t => `
+      <div class="task" data-id="${t.id}">
+        <div class="checkbox ${t.done ? 'done' : ''}" data-action="toggle">${t.done ? '✓' : ''}</div>
+        <div class="task-title ${t.done ? 'done' : ''}">${escapeHtml(t.title)}</div>
+        <button class="del-btn" data-action="delete">Delete</button>
+      </div>
+    `).join('');
+    const doneCount = tasks.filter(t => t.done).length;
+    statEl.textContent = `${doneCount} of ${tasks.length} done`;
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  async function addTask() {
+    const title = inputEl.value.trim();
+    if (!title) return;
+    clearError();
+    try {
+      const res = await fetch(`${API_BASE}/tasks`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, done: false })
+      });
+      if (!res.ok) throw new Error('Could not add task');
+      inputEl.value = '';
+      fetchTasks();
+    } catch (e) {
+      showError('Could not add the task. Please try again.');
+    }
+  }
+
+  async function toggleTask(id, currentDone) {
+    clearError();
+    try {
+      const res = await fetch(`${API_BASE}/tasks/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ done: !currentDone })
+      });
+      if (!res.ok) throw new Error('Could not update task');
+      fetchTasks();
+    } catch (e) {
+      showError('Could not update the task. Please try again.');
+    }
+  }
+
+  async function deleteTask(id) {
+    clearError();
+    try {
+      const res = await fetch(`${API_BASE}/tasks/${id}`, { method: 'DELETE' });
+      if (!res.ok && res.status !== 204) throw new Error('Could not delete task');
+      fetchTasks();
+    } catch (e) {
+      showError('Could not delete the task. Please try again.');
+    }
+  }
+
+  async function updateTask() {
+    clearError();
+    const id = (updateIdEl.value || '').trim();
+    if (!id) return showError('Please provide the task ID to update.');
+    const title = (updateTitleEl.value || '').trim();
+    const done = !!updateDoneEl.checked;
+    const body = {};
+    if (title.length) body.title = title;
+    body.done = done;
+    try {
+      const res = await fetch(`${API_BASE}/tasks/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      if (!res.ok) throw new Error('Could not update task');
+      // clear inputs on success
+      updateIdEl.value = '';
+      updateTitleEl.value = '';
+      updateDoneEl.checked = false;
+      fetchTasks();
+    } catch (e) {
+      showError('Could not update the task. Please check the ID and try again.');
+    }
+  }
+
+  addBtn.addEventListener('click', addTask);
+  inputEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') addTask(); });
+  updateBtn.addEventListener('click', updateTask);
+  updateTitleEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') updateTask(); });
+
+  listEl.addEventListener('click', (e) => {
+    const taskEl = e.target.closest('.task');
+    if (!taskEl) return;
+    const id = taskEl.dataset.id;
+    const action = e.target.dataset.action;
+    if (action === 'delete') deleteTask(id);
+    if (action === 'toggle') {
+      const isDone = e.target.classList.contains('done');
+      toggleTask(id, isDone);
+    }
+  });
+
+  fetchTasks();
+</script>
+</body>
+</html>
