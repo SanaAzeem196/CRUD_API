@@ -138,23 +138,53 @@ app.post('/tasks', (req, res) => {
 });
 
 // PUT /tasks/:id — updates title and/or done
+// app.put('/tasks/:id', (req, res) => {
+//   const id = Number(req.params.id);
+//   const task = tasks.find((t) => t.id === id);
+
+//   if (!task) {
+//     return res.status(404).json({ error: `Task ${id} not found` });
+//   }
+
+//   const { title, done } = req.body || {};
+//   const titleProvided = title !== undefined;
+//   const doneProvided = done !== undefined;
+
+//   // At least one field must be sent
+//   if (!titleProvided && !doneProvided) {
+//     return res.status(400).json({ error: 'request body must include title and/or done' });
+//   }
+//   // Whichever fields ARE sent must be the right type
+//   if (titleProvided && (typeof title !== 'string' || title.trim() === '')) {
+//     return res.status(400).json({ error: 'title must be a non-empty string' });
+//   }
+//   if (doneProvided && typeof done !== 'boolean') {
+//     return res.status(400).json({ error: 'done must be a boolean (true/false)' });
+//   }
+
+//   // Apply only the fields that were actually sent
+//   if (titleProvided) task.title = title.trim();
+//   if (doneProvided) task.done = done;
+
+//   res.json(task);
+// });
+
+// PUT /tasks/:id — updates a row's title and/or done in the database
 app.put('/tasks/:id', (req, res) => {
   const id = Number(req.params.id);
-  const task = tasks.find((t) => t.id === id);
+  const task = db.prepare('SELECT * FROM tasks WHERE id = ?').get(id);
 
   if (!task) {
-    return res.status(404).json({ error: `Task ${id} not found` });
+    return res.status(404).json({ error: 'Task not found' });
   }
 
   const { title, done } = req.body || {};
   const titleProvided = title !== undefined;
   const doneProvided = done !== undefined;
 
-  // At least one field must be sent
   if (!titleProvided && !doneProvided) {
     return res.status(400).json({ error: 'request body must include title and/or done' });
   }
-  // Whichever fields ARE sent must be the right type
   if (titleProvided && (typeof title !== 'string' || title.trim() === '')) {
     return res.status(400).json({ error: 'title must be a non-empty string' });
   }
@@ -162,27 +192,42 @@ app.put('/tasks/:id', (req, res) => {
     return res.status(400).json({ error: 'done must be a boolean (true/false)' });
   }
 
-  // Apply only the fields that were actually sent
-  if (titleProvided) task.title = title.trim();
-  if (doneProvided) task.done = done;
+  // Use the new value if one was sent, otherwise keep what's already stored.
+  const newTitle = titleProvided ? title.trim() : task.title;
+  const newDone = doneProvided ? (done ? 1 : 0) : task.done;
 
-  res.json(task);
+  db.prepare('UPDATE tasks SET title = ?, done = ? WHERE id = ?').run(newTitle, newDone, id);
+
+  const updated = db.prepare('SELECT * FROM tasks WHERE id = ?').get(id);
+  res.json(updated);
 });
 
-
-
 // DELETE /tasks/:id — removes the task
+// app.delete('/tasks/:id', (req, res) => {
+//   const id = Number(req.params.id);
+//   const index = tasks.findIndex((t) => t.id === id);
+
+//   if (index === -1) {
+//     return res.status(404).json({ error: `Task ${id} not found` });
+//   }
+
+//   tasks.splice(index, 1); // remove exactly one element at that position
+
+//   res.status(204).send(); // 204 = "No Content" — success, empty body
+// });
+
+// DELETE /tasks/:id — removes a row from the database
 app.delete('/tasks/:id', (req, res) => {
   const id = Number(req.params.id);
-  const index = tasks.findIndex((t) => t.id === id);
+  const task = db.prepare('SELECT * FROM tasks WHERE id = ?').get(id);
 
-  if (index === -1) {
-    return res.status(404).json({ error: `Task ${id} not found` });
+  if (!task) {
+    return res.status(404).json({ error: 'Task not found' });
   }
 
-  tasks.splice(index, 1); // remove exactly one element at that position
+  db.prepare('DELETE FROM tasks WHERE id = ?').run(id);
 
-  res.status(204).send(); // 204 = "No Content" — success, empty body
+  res.status(204).send(); // 204 = "No Content"
 });
 
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(openapiSpec));
