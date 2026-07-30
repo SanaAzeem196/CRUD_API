@@ -21,6 +21,13 @@ db.exec(`
 // Without this "only if empty" check, every restart would add 3 more rows.
 const row = db.prepare('SELECT COUNT(*) AS count FROM tasks').get();
 if (row.count === 0) {
+  // SQLite AUTOINCREMENT keeps its own counter even after rows are deleted.
+  // Reset that counter when the table is empty so the demo tasks start again at 1.
+  const sequenceTable = db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'sqlite_sequence'").get();
+  if (sequenceTable) {
+    db.prepare("DELETE FROM sqlite_sequence WHERE name = 'tasks'").run();
+  }
+
   const insert = db.prepare('INSERT INTO tasks (title, done) VALUES (?, ?)');
   insert.run('Buy milk', 0);
   insert.run('Walk the dog', 0);

@@ -133,7 +133,7 @@ Content-Type: application/json; charset=utf-8
 
 ### Swagger UI
 
-![Swagger UI — GET /tasks/4](image.png)
+![Swagger UI — GET /tasks/4](images/image.png)
 
 ---
 
@@ -190,31 +190,31 @@ This walks through Stage 4: opening the live database file and running SQL by ha
 
 **1. `SELECT * FROM tasks;`** — the starting state: 5 tasks in the table.
 
-![alt text](image-1.png)
+![alt text](images/image-1.png)
 
 **2. `SELECT * FROM tasks WHERE done = 1;`** — filtered to only the completed task.
 
-![alt text](image-2.png)
+![alt text](images/image-2.png)
 
 **3. `SELECT COUNT(*) FROM tasks;`** — a quick count: 5 rows.
 
-![alt text](image-3.png)
+![alt text](images/image-3.png)
 
 **4. `UPDATE tasks SET done = 1;`** — marks every task done (no `WHERE` clause, on purpose, to see the effect) — 5 rows affected.
 
-![alt text](image-4.png)
+![alt text](images/image-4.png)
 
 **5. `DELETE FROM tasks WHERE done = 1;`** — since everything was just marked done, this deletes every row — 5 rows affected.
 
-![alt text](image-5.png)
+![alt text](images/image-5.png)
 
 **6. `SELECT * FROM tasks;`** — confirms the table is now empty: 0 rows returned.
 
-![alt text](image-6.png)
+![alt text](images/image-6.png)
 
 **7. Calling `GET /tasks` from the running API (via Swagger UI), with no server restart** — the response comes back `[]`, matching the empty table exactly. This is the actual checkpoint: the API and DB Browser are reading the same file, live.
 
-![alt text](image-7.png)
+![alt text](images/image-7.png)
 
 ---
 

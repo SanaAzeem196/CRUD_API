@@ -81,6 +81,13 @@
     padding: 14px 16px;
     margin-bottom: 8px;
   }
+  .task-id {
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 700;
+    min-width: 36px;
+    flex-shrink: 0;
+  }
   .task-title { flex: 1; font-size: 15px; }
   .task-title.done { text-decoration: line-through; color: var(--muted); }
   .checkbox {
@@ -198,6 +205,7 @@
     listEl.innerHTML = tasks.map(t => `
       <div class="task" data-id="${t.id}">
         <div class="checkbox ${t.done ? 'done' : ''}" data-action="toggle">${t.done ? '✓' : ''}</div>
+        <div class="task-id">${t.id}</div>
         <div class="task-title ${t.done ? 'done' : ''}">${escapeHtml(t.title)}</div>
         <button class="del-btn" data-action="delete">Delete</button>
       </div>
