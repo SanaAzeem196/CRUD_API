@@ -1,7 +1,10 @@
+//GENERAL CODE
 const express = require('express');
 const swaggerUi = require('swagger-ui-express');
 const openapiSpec = require('./openapi.json');
 const Database = require('better-sqlite3');
+
+
  // A3 postgres code
  require('dotenv').config();
 const { Pool } = require('pg');
@@ -35,10 +38,9 @@ initDb().catch((err) => {
 // A3 postgres code ends here
 
 
-
+// A2 CODE
 // Opens tasks.db, creating the file if it doesn't exist yet.
 const db = new Database('tasks.db');
-
 // Creates the tasks table only if it doesn't already exist.
 // id is the primary key — SQLite hands out these numbers for us.
 // done is stored as 0/1 since SQLite has no real boolean type.
@@ -49,7 +51,7 @@ db.exec(`
     done INTEGER NOT NULL DEFAULT 0
   )
 `);
-
+// A2 CODE
 // Seed the 3 example tasks — but only if the table is currently empty.
 // Without this "only if empty" check, every restart would add 3 more rows.
 const row = db.prepare('SELECT COUNT(*) AS count FROM tasks').get();
@@ -66,11 +68,13 @@ if (row.count === 0) {
   insert.run('Walk the dog', 0);
   insert.run('Finish CRUD assignment', 1);
 }
+// GENERAL CODE 
 const app = express();
 app.use(express.json());
 app.use(express.static('public'));
 const PORT = 3000;
 
+//A1 MEMORY CODE
 // In-memory "database" — just a JS array, lives only in RAM.
 // Resets every time the server restarts (that's expected for now).
 let tasks = [
@@ -99,17 +103,33 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
+// A1 CODE
 // GET /tasks — returns the whole list
 // app.get('/tasks', (req, res) => {
 //   res.json(tasks);
 // });
 
+// A2 CODE
 // GET /tasks — returns the whole list, now read live from the database
-app.get('/tasks', (req, res) => {
-  const rows = db.prepare('SELECT * FROM tasks').all();
-  res.json(rows);
+// app.get('/tasks', (req, res) => {
+//   const rows = db.prepare('SELECT * FROM tasks').all();
+//   res.json(rows);
+// });
+
+
+// A3 Code 
+// GET /tasks — now reads live from Postgres
+app.get('/tasks', async (req, res) => {
+  try {
+    const { rows } = await pool.query('SELECT * FROM tasks');
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Something went wrong' });
+  }
 });
 
+// A1 CODE 
 // GET /tasks/:id — returns one task by id
 // app.get('/tasks/:id', (req, res) => {
 //   const id = Number(req.params.id); // path params arrive as strings, so convert
@@ -122,18 +142,38 @@ app.get('/tasks', (req, res) => {
 //   res.json(task);
 // });
 
+// A2 CODE
 // GET /tasks/:id — returns one row by id, now read live from the database
-app.get('/tasks/:id', (req, res) => {
+// app.get('/tasks/:id', (req, res) => {
+//   const id = Number(req.params.id);
+//   const task = db.prepare('SELECT * FROM tasks WHERE id = ?').get(id);
+
+//   if (!task) {
+//     return res.status(404).json({ error: 'Task not found' });
+//   }
+
+//   res.json(task);
+// });
+
+// A3 CODE
+// GET /tasks/:id — fetches one row from Postgres
+app.get('/tasks/:id', async (req, res) => {
   const id = Number(req.params.id);
-  const task = db.prepare('SELECT * FROM tasks WHERE id = ?').get(id);
+  try {
+    const { rows } = await pool.query('SELECT * FROM tasks WHERE id = $1', [id]);
 
-  if (!task) {
-    return res.status(404).json({ error: 'Task not found' });
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Task not found' });
+    }
+
+    res.json(rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Something went wrong' });
   }
-
-  res.json(task);
 });
 
+// A1 CODE
 // POST /tasks — creates a new task from the JSON body
 // app.post('/tasks', (req, res) => {
 //   const { title } = req.body || {};
@@ -155,7 +195,7 @@ app.get('/tasks/:id', (req, res) => {
 //   res.status(201).json(newTask); // 201 = "Created"
 // });
 
-
+// A2 CODE
 // POST /tasks — inserts a new row into the database
 app.post('/tasks', (req, res) => {
   const { title } = req.body || {};
@@ -177,6 +217,7 @@ app.post('/tasks', (req, res) => {
   res.status(201).json(newTask); // 201 = "Created"
 });
 
+// A1 CODE
 // PUT /tasks/:id — updates title and/or done
 // app.put('/tasks/:id', (req, res) => {
 //   const id = Number(req.params.id);
@@ -209,6 +250,8 @@ app.post('/tasks', (req, res) => {
 //   res.json(task);
 // });
 
+
+// A2 CODE
 // PUT /tasks/:id — updates a row's title and/or done in the database
 app.put('/tasks/:id', (req, res) => {
   const id = Number(req.params.id);
@@ -242,6 +285,8 @@ app.put('/tasks/:id', (req, res) => {
   res.json(updated);
 });
 
+
+// A1 CODE
 // DELETE /tasks/:id — removes the task
 // app.delete('/tasks/:id', (req, res) => {
 //   const id = Number(req.params.id);
@@ -256,6 +301,7 @@ app.put('/tasks/:id', (req, res) => {
 //   res.status(204).send(); // 204 = "No Content" — success, empty body
 // });
 
+// A2 CODE
 // DELETE /tasks/:id — removes a row from the database
 app.delete('/tasks/:id', (req, res) => {
   const id = Number(req.params.id);
@@ -270,6 +316,7 @@ app.delete('/tasks/:id', (req, res) => {
   res.status(204).send(); // 204 = "No Content"
 });
 
+// GENERAL CODE
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(openapiSpec));
 app.listen(PORT, () => {
   console.log(`Task API running at http://localhost:${PORT}`);
