@@ -2,6 +2,39 @@ const express = require('express');
 const swaggerUi = require('swagger-ui-express');
 const openapiSpec = require('./openapi.json');
 const Database = require('better-sqlite3');
+ // A3 postgres code
+ require('dotenv').config();
+const { Pool } = require('pg');
+
+// Connects using the DATABASE_URL from .env — never hardcode credentials.
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+
+// Creates the tasks table if it doesn't exist, and seeds 3 example tasks
+// only if the table is currently empty — same first-run rule as A2.
+async function initDb() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS tasks (
+      id SERIAL PRIMARY KEY,
+      title TEXT NOT NULL,
+      done BOOLEAN NOT NULL DEFAULT false
+    )
+  `);
+
+  const { rows } = await pool.query('SELECT COUNT(*) AS count FROM tasks');
+  if (Number(rows[0].count) === 0) {
+    await pool.query('INSERT INTO tasks (title, done) VALUES ($1, $2)', ['Buy milk', false]);
+    await pool.query('INSERT INTO tasks (title, done) VALUES ($1, $2)', ['Walk the dog', false]);
+    await pool.query('INSERT INTO tasks (title, done) VALUES ($1, $2)', ['Finish CRUD assignment', true]);
+  }
+}
+
+initDb().catch((err) => {
+  console.error('Failed to initialize database:', err);
+  process.exit(1);
+});
+// A3 postgres code ends here
+
+
 
 // Opens tasks.db, creating the file if it doesn't exist yet.
 const db = new Database('tasks.db');
