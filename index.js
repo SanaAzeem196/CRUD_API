@@ -11,6 +11,36 @@ const openapiSpec = require('./openapi.json');
  const { createClient } = require('@supabase/supabase-js');
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
+
+// A4 code
+// Reusable auth guard. Any route that needs a logged-in user can just
+// add this function as a second argument — Express runs it first.
+async function requireAuth(req, res, next) {
+  const authHeader = req.headers.authorization;
+
+  const token = authHeader && authHeader.startsWith('Bearer ')
+    ? authHeader.split(' ')[1]
+    : null;
+
+  if (!token) {
+    return res.status(401).json({ error: 'Access token required' });
+  }
+
+  const { data, error } = await supabase.auth.getUser(token);
+
+  if (error || !data.user) {
+    return res.status(401).json({ error: 'Invalid or expired token' });
+  }
+
+  // Attach the verified user to the request object, so the route
+  // handler that runs next can use req.user without re-verifying.
+  req.user = data.user;
+  next(); // hand control to the actual route handler
+}
+
+// A4 code ends here
+
+
 // A3 code
 const { Pool } = require('pg');
 
@@ -172,37 +202,36 @@ app.get('/public/info', (req, res) => {
   res.status(200).json({ message: 'Welcome stranger! This info is public.' });
 });
 
-// GET /protected/profile — now actually verifies the token with Supabase
-app.get('/protected/profile', async (req, res) => {
-  const authHeader = req.headers.authorization;
-
-  const token = authHeader && authHeader.startsWith('Bearer ')
-    ? authHeader.split(' ')[1]
-    : null;
-
-  if (!token) {
-    return res.status(401).json({ error: 'Access token required' });
-  }
-
-  // Ask Supabase whether this token is genuine. This makes a real
-  // network call to Supabase's servers — so the answer is trustworthy,
-  // unlike just decoding the token ourselves (which anyone could fake).
-  const { data, error } = await supabase.auth.getUser(token);
-
-  if (error || !data.user) {
-    return res.status(401).json({ error: 'Invalid or expired token' });
-  }
-
-  // Only return safe, non-sensitive fields — never the whole raw object.
+// GET /protected/profile — the guard runs first; this only executes
+// if requireAuth already confirmed the user is real.
+app.get('/protected/profile', requireAuth, (req, res) => {
   res.status(200).json({
-    id: data.user.id,
-    email: data.user.email,
-    created_at: data.user.created_at,
+    id: req.user.id,
+    email: req.user.email,
+    created_at: req.user.created_at,
   });
 });
 // A4 code ends here
 
+// A4 code 
+// POST /auth/logout — protected: only a logged-in user can log out
+app.post('/auth/logout', requireAuth, async (req, res) => {
+  const { error } = await supabase.auth.signOut();
 
+  if (error) {
+    return res.status(400).json({ error: error.message });
+  }
+
+  res.status(204).send();
+});
+// A4 code ends here
+
+// A4 code
+app.get('/protected/dashboard', requireAuth, (req, res) => {
+  res.status(200).json({ message: `Welcome to your dashboard, ${req.user.email}` });
+});
+
+// A4 code ends here
 // A3 Code 
 // GET /tasks — now reads live from Postgres
 app.get('/tasks', async (req, res) => {
