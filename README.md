@@ -524,6 +524,7 @@ Header: Authorization: Bearer <paste access_token>
 
 Every rejection in this version is a `401 Unauthorized` — meaning "I don't know who you are" (no token, bad token, expired token). This project doesn't yet distinguish `403 Forbidden` ("I know exactly who you are, and you still may not") — that would require role/permission logic on top of authentication, which is outside this assignment's scope but worth knowing as the next layer up.
 
+
 ## License
 
 MIT — built for educational purposes.
