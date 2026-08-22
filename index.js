@@ -165,6 +165,34 @@ app.post('/auth/login', async (req, res) => {
   });
 });
 // A4 code ends here
+
+// A4 code
+// GET /public/info — open to everyone, no auth needed
+app.get('/public/info', (req, res) => {
+  res.status(200).json({ message: 'Welcome stranger! This info is public.' });
+});
+
+// GET /protected/profile — for now, just checks that a token was sent.
+// We are NOT verifying it's real yet — that's Stage 3.
+app.get('/protected/profile', (req, res) => {
+  const authHeader = req.headers.authorization;
+
+  // Expected shape: "Authorization: Bearer <token>"
+  // Split on the space and check both pieces are actually present.
+  const token = authHeader && authHeader.startsWith('Bearer ')
+    ? authHeader.split(' ')[1]
+    : null;
+
+  if (!token) {
+    return res.status(401).json({ error: 'Access token required' });
+  }
+
+  // Placeholder response for now — Stage 3 replaces this with real user data.
+  res.status(200).json({ message: 'Token received (not yet verified)' });
+});
+// A4 code ends here
+
+
 // A3 Code 
 // GET /tasks — now reads live from Postgres
 app.get('/tasks', async (req, res) => {
