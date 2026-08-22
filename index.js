@@ -172,13 +172,10 @@ app.get('/public/info', (req, res) => {
   res.status(200).json({ message: 'Welcome stranger! This info is public.' });
 });
 
-// GET /protected/profile — for now, just checks that a token was sent.
-// We are NOT verifying it's real yet — that's Stage 3.
-app.get('/protected/profile', (req, res) => {
+// GET /protected/profile — now actually verifies the token with Supabase
+app.get('/protected/profile', async (req, res) => {
   const authHeader = req.headers.authorization;
 
-  // Expected shape: "Authorization: Bearer <token>"
-  // Split on the space and check both pieces are actually present.
   const token = authHeader && authHeader.startsWith('Bearer ')
     ? authHeader.split(' ')[1]
     : null;
@@ -187,8 +184,21 @@ app.get('/protected/profile', (req, res) => {
     return res.status(401).json({ error: 'Access token required' });
   }
 
-  // Placeholder response for now — Stage 3 replaces this with real user data.
-  res.status(200).json({ message: 'Token received (not yet verified)' });
+  // Ask Supabase whether this token is genuine. This makes a real
+  // network call to Supabase's servers — so the answer is trustworthy,
+  // unlike just decoding the token ourselves (which anyone could fake).
+  const { data, error } = await supabase.auth.getUser(token);
+
+  if (error || !data.user) {
+    return res.status(401).json({ error: 'Invalid or expired token' });
+  }
+
+  // Only return safe, non-sensitive fields — never the whole raw object.
+  res.status(200).json({
+    id: data.user.id,
+    email: data.user.email,
+    created_at: data.user.created_at,
+  });
 });
 // A4 code ends here
 
