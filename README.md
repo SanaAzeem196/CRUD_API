@@ -218,6 +218,16 @@ This walks through Stage 4: opening the live database file and running SQL by ha
 
 ---
 
+# v3 — Postgres-backed CRUD (Week 3 · Assignment A3)
+
+Running the following commands on terminal of vscode:
+
+**1 docker --version 
+**2 docker run --name taskdb -e POSTGRES_PASSWORD=dev -e POSTGRES_DB=tasks -p 5432:5432 -v taskdata:/var/lib/postgresql/data -d postgres
+**3 docker exec -it taskdb psql -U postgres -d tasks
+**4 \dt
+**5 \q
+
 ## License
 
 MIT — built for educational purposes.

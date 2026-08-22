@@ -7,13 +7,18 @@ const openapiSpec = require('./openapi.json');
 
  // A3 postgres code
  require('dotenv').config();
+ //A4 code
+ const { createClient } = require('@supabase/supabase-js');
+
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
+// A3 code
 const { Pool } = require('pg');
 
 // // GENERAL CODE 
 const app = express();
 app.use(express.json());
 app.use(express.static('public'));
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 
 // Connects using the DATABASE_URL from .env — never hardcode credentials.
@@ -38,12 +43,9 @@ async function initDb() {
   }
 }
 
-initDb().catch((err) => {
-  console.error('Failed to initialize database:', err);
-  process.exit(1);
-});
 // A3 postgres code ends here
-
+// A4 code
+console.log('Connected to Supabase');
 
 // A2 CODE
 // Opens tasks.db, creating the file if it doesn't exist yet.
@@ -123,7 +125,45 @@ app.get('/health', (req, res) => {
 //   res.json(rows);
 // });
 
+// A4 code
+// POST /auth/signup — creates a new user account via Supabase
+app.post('/auth/signup', async (req, res) => {
+  const { email, password } = req.body || {};
 
+  // Validation: the server never trusts the client.
+  if (!email || !password) {
+    return res.status(400).json({ error: 'email and password are required' });
+  }
+
+  const { data, error } = await supabase.auth.signUp({ email, password });
+
+  if (error) {
+    return res.status(400).json({ error: error.message });
+  }
+
+  res.status(201).json(data.user);
+});
+
+// POST /auth/login — authenticates a user and returns a JWT
+app.post('/auth/login', async (req, res) => {
+  const { email, password } = req.body || {};
+
+  if (!email || !password) {
+    return res.status(400).json({ error: 'email and password are required' });
+  }
+
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+
+  if (error) {
+    return res.status(401).json({ error: 'Invalid login credentials' });
+  }
+
+  res.status(200).json({
+    access_token: data.session.access_token,
+    refresh_token: data.session.refresh_token,
+  });
+});
+// A4 code ends here
 // A3 Code 
 // GET /tasks — now reads live from Postgres
 app.get('/tasks', async (req, res) => {
