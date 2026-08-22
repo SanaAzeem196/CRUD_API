@@ -155,6 +155,7 @@ app.post('/auth/login', async (req, res) => {
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
+    
     return res.status(401).json({ error: 'Invalid login credentials' });
   }
 
